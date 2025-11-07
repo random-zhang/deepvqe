@@ -1,0 +1,111 @@
+# DeepVQE-AEC 优化版训练脚本配置文件
+# 这个文件包含了所有可配置参数的默认值和说明
+
+# 数据相关参数
+data:
+  manifest_csv: "path/to/your/manifest.csv"  # 数据清单CSV文件路径（必需）
+  segment_frames: 256                        # 音频段帧数
+  use_val: true                             # 是否使用验证集
+
+# STFT参数
+stft:
+  n_fft: 512                               # FFT点数
+  hop_length: 128                          # 跳跃长度
+  win_length: 512                          # 窗口长度
+
+# 模型参数
+model:
+  align_delay: 0                           # 对齐延迟
+
+# 训练参数
+training:
+  epochs: 100                              # 训练轮数
+  batch_size: 8                            # 批次大小
+  accumulate_grad_batches: 1               # 梯度累积批次
+  lr: 0.001                                # 学习率
+  weight_decay: 0.0001                     # 权重衰减
+  clip_grad: 1.0                           # 梯度裁剪
+  amp: true                                # 是否使用混合精度训练
+
+# 优化器参数
+optimizer:
+  type: "adamw"                            # 优化器类型 [adam, adamw, radam, sgd, sophia]
+  sophia_beta1: 0.965                      # Sophia优化器beta1参数
+  sophia_beta2: 0.99                       # Sophia优化器beta2参数
+  sophia_rho: 0.04                         # Sophia优化器rho参数
+  sophia_k: 10                             # Sophia优化器k参数
+
+# 学习率调度器参数
+scheduler:
+  type: "cosine"                           # 学习率调度器类型 [cosine, plateau, step, exponential]
+  warmup_steps: 0                          # 预热步数
+
+# 早停参数
+early_stopping:
+  enabled: true                            # 是否启用早停
+  patience: 10                             # 早停耐心值
+  min_delta: 0.0001                        # 早停最小改善值
+
+# 损失函数参数
+loss:
+  type: "sisnr"                            # 损失函数类型 [sisnr, complex, hybrid]
+
+# 系统参数
+system:
+  cpu: false                               # 强制使用CPU
+  seed: 42                                 # 随机种子
+  ckpt_dir: "./checkpoints"                # 检查点保存目录
+  log_interval: 100                        # 日志打印间隔
+
+# 优化参数
+optimization:
+  num_workers: null                        # 数据加载器工作进程数（null表示自动设置为CPU核心数的一半，最多8个）
+  precompute_stft: true                    # 是否预计算STFT缓存
+  compile_model: false                     # 是否编译模型（PyTorch 2.0+）
+
+# 检查点恢复
+checkpoint:
+  resume_checkpoint: null                  # 恢复训练的检查点路径
+
+# 测试参数
+test:
+  test_mode: false                         # 运行测试模式
+  checkpoint_path: null                    # 测试时使用的检查点路径
+  test_after_training: false               # 训练后自动运行测试
+
+# 性能优化说明
+performance_notes: |
+  1. 数据加载优化:
+     - num_workers: 设置为CPU核心数的一半，最多8个
+     - pin_memory: 启用以加速GPU传输
+     - persistent_workers: 保持worker进程以减少启动开销
+  
+  2. STFT缓存:
+     - precompute_stft: 预计算STFT以避免重复计算
+     - 缓存目录: 自动创建在数据清单同级目录下的stft_cache文件夹
+  
+  3. 混合精度训练:
+     - amp: 启用自动混合精度以减少显存使用并加速训练
+  
+  4. 模型编译:
+     - compile_model: PyTorch 2.0+支持，可进一步优化模型执行
+  
+  5. 验证频率:
+     - 每5个epoch进行一次验证，减少验证开销
+  
+  6. 梯度累积:
+     - accumulate_grad_batches: 支持梯度累积以模拟更大的批次大小
+
+# 使用示例
+usage_examples: |
+  # 基础训练
+  python train_aec_optimized.py --manifest_csv data/manifest.csv --use_val --amp --precompute_stft
+  
+  # 高性能训练
+  python train_aec_optimized.py --manifest_csv data/manifest.csv --use_val --amp --precompute_stft --compile_model --num_workers 8
+  
+  # 从检查点恢复
+  python train_aec_optimized.py --manifest_csv data/manifest.csv --resume_checkpoint checkpoints/deepvqe_aec_epoch50.pt
+  
+  # 测试模式
+  python train_aec_optimized.py --test --manifest_csv data/manifest.csv --checkpoint checkpoints/deepvqe_aec_best.pt

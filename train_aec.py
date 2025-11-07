@@ -1205,3 +1205,4 @@ if __name__ == "__main__":
         test(args)
     else:
         train(args)
+        print()
